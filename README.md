@@ -17,3 +17,6 @@ The file "case_dataset.npy" is the data of the example case.
 
 ### The inference process
 The file "Stratigraphic configuration acquisition process of synthetic case.ipynb" is the inference process.
+
+## Reference
+Wei, X., & Wang, H. (2022). Stochastic stratigraphic modeling using Bayesian machine learning. Engineering Geology, 307, 106789. doi: https://doi.org/10.1016/j.enggeo.2022.106789
