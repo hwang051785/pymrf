@@ -2,7 +2,7 @@
 pyMRF is a vectorized Python repository for Markov random field simulation,
 
 ************************************************************************************************
-"""
+""" 
 
 import numpy as np
 from copy import copy
