@@ -13,7 +13,8 @@ You can try out this example by using an interactive Jupyter Notebook in your ow
 The file "pyMRF.py" is the main code of the program.
 
 ### case dataset
-The file "case_dataset.npy" is the data of the example case.
+The file "case_dataset.npy" is the data of the example case, which is generated using the file "generate_MRF_realizations.py". 
+The file "generate_MRF_realizations.py" is the code for generating an MRF given a predetermined beta vector.
 
 ### The inference process
 The file "Stratigraphic configuration acquisition process of synthetic case.ipynb" is the inference process.
