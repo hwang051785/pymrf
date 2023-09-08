@@ -1,5 +1,5 @@
 """
-pyMRF is a vectorized Python repository for Markov random field simulation
+pyMRF is a vectorized Python repository for Markov random field simulation,
 
 ************************************************************************************************
 """
@@ -59,7 +59,7 @@ class Element:
                 self.init_field = np.empty(phys_shp).flatten()
                 self.init_field[:] = np.nan
                 self.fixed_flag = ~np.isnan(self.init_field)  # flag vector indicating known elements
-                self.num_fixed = np.sum(self.fixed_flag) #***************************************
+                self.num_fixed = np.sum(self.fixed_flag) 
                 if n_labels is None:
                     raise Exception("n_labels need to be provided!")
                 else:
@@ -71,7 +71,7 @@ class Element:
             self.labels = []
             self.init_field = init_field.flatten()
             self.fixed_flag = ~np.isnan(self.init_field)
-            self.num_fixed = np.sum(self.fixed_flag) #***************************************
+            self.num_fixed = np.sum(self.fixed_flag) 
             self.init_field = self.init_field.astype(int)  # need to be converted to 'int32'
             self.n_labels = len(np.unique(self.init_field[self.fixed_flag]))
             self.num_not_fixed = np.sum(~self.fixed_flag)
@@ -478,23 +478,17 @@ class Element:
         """
         # TODO: [GENERAL] In-depth description of the gibbs sampling function
         # Calculate gibbs/mrf energy
-        #total_energy_field, gibbs_energy = self.calc_gibbs_energy(self.labels[-1], self.betas[-1], init_nearest_distance, k)
         gibbs_energy = self.calc_gibbs_energy(self.labels[-1], self.betas[-1])
         if verbose == "energy":
             print("gibbs energy:", gibbs_energy)
-        if dist_for_KHMD is None:
-            total_energy_field = gibbs_energy
-        else:
-            total_energy_field = self.get_total_energy(dist_for_KHMD, gibbs_energy)               
+        total_energy = self.get_total_energy(dist_for_KHMD, gibbs_energy)               
         # Calculate probability of labels
-        labels_prob = self._calc_labels_prob(total_energy_field, t)
+        labels_prob = self._calc_labels_prob(total_energy, t)
         if verbose == "energy":
             print("Labels probability:", labels_prob)
 
         # append total energy of the latest label_list
-        #gibbs_energy_pre = np.sum(total_energy_field, axis=2).T
-        self.storage_te.append(sum(gibbs_energy[np.arange(len(gibbs_energy)), self.labels[-1]]))
-        #self.storage_te.append(sum(total_energy_field[np.arange(len(total_energy_field)), self.labels[-1]]))
+        self.storage_te.append(sum(total_energy[np.arange(len(total_energy)), self.labels[-1]]))
 
         if self.num_not_fixed > 0:
             # make copy of previous labels
@@ -503,15 +497,15 @@ class Element:
                 new_labels[color_f] = draw_labels_vect(labels_prob[color_f])
                 new_labels[self.fixed_flag] = self.labels[0][self.fixed_flag]
                 # now recalculate gibbs energy from the mixture of old and new labels
-                #if i < (self.colors.shape[0] - 1):
                 if i < (len(self.colors) - 1):
                     gibbs_energy = self.calc_gibbs_energy(new_labels, self.betas[-1])
-                    labels_prob = self._calc_labels_prob(total_energy_field, t)
+                    total_energy = self.get_total_energy(dist_for_KHMD, gibbs_energy)  
+                    labels_prob = self._calc_labels_prob(total_energy, t)
 
             # append labels generated from the current iteration
             self.labels.append(new_labels)
+  
             
-
         if not fix_beta:
             beta_next = copy(self.betas[-1])
             # PROPOSAL STEP
@@ -726,10 +720,16 @@ class Element:
             if self.num_not_fixed > 0:
                 if image_init is None:
                     if labels_prob_init is None:
-                        labels_prob_all = np.ones(shape=(self.num_not_fixed, self.n_labels))*(1/self.n_labels) 
-                        labels_prob = labels_prob_all[~self.fixed_flag]
+                        if self.phyDim == 3:
+                            labels_prob = np.ones(shape=(self.num_not_fixed, self.n_labels))*(1/self.n_labels)
+                        else:
+                            labels_prob_all = np.ones(shape=(self.num_not_fixed, self.n_labels))*(1/self.n_labels) 
+                            labels_prob = labels_prob_all[~self.fixed_flag]
                     else:
-                        labels_prob = labels_prob_init
+                        if self.phyDim == 3:
+                            labels_prob = labels_prob_init[~self.fixed_flag]
+                        else:
+                            labels_prob = labels_prob_init                     
                     self.labels[0][~self.fixed_flag] = draw_labels_vect(labels_prob)
                 else:
                     self.labels[0][~self.fixed_flag] = image_init.astype(int).flatten()[~self.fixed_flag]                              
@@ -766,26 +766,26 @@ class Element:
     
     def get_total_energy(self, dist_nearest, gibbs_energy):
         
-        init_field_lebels = self.init_field[self.fixed_flag]
-        init_field_lebels_desk = np.array([init_field_lebels, ]* self.n_labels).T
-        comp_deck = np.tile(np.arange(self.n_labels),self.num_fixed).reshape((self.num_fixed,self.n_labels))
-        diff = init_field_lebels_desk - comp_deck
-        temp = np.zeros_like(diff, dtype=float)
-        temp[diff == 0] = 1
-        label_flag = np.array(temp).astype(bool) 
-        
-        dist_for_fixed = np.zeros((self.num_fixed, self.n_labels))
-        dist_for_fixed[~label_flag] = 10**10
-        
-        
-        dist_for_all = np.ones((self.num_pixels , self.n_labels))
-        dist_for_all[self.fixed_flag,:] = dist_for_fixed
-        dist_for_all[~self.fixed_flag,:] = dist_nearest
-        
-        total_energy = dist_for_all + gibbs_energy
+        if dist_nearest is None:
+            total_energy = gibbs_energy
+        else:
+            init_field_lebels = self.init_field[self.fixed_flag]
+            init_field_lebels_desk = np.array([init_field_lebels, ]* self.n_labels).T
+            comp_deck = np.tile(np.arange(self.n_labels),self.num_fixed).reshape((self.num_fixed,self.n_labels))
+            diff = init_field_lebels_desk - comp_deck
+            temp = np.zeros_like(diff, dtype=float)
+            temp[diff == 0] = 1
+            label_flag = np.array(temp).astype(bool) 
+            
+            dist_for_fixed = np.zeros((self.num_fixed, self.n_labels))
+            dist_for_fixed[~label_flag] = 10**10
+                        
+            dist_for_all = np.ones((self.num_pixels , self.n_labels))
+            dist_for_all[self.fixed_flag,:] = dist_for_fixed
+            dist_for_all[~self.fixed_flag,:] = dist_nearest
+            
+            total_energy = dist_for_all + gibbs_energy
         return total_energy
-        
-        
         
     def _calc_labels_prob(self, te, t):
         """"Calculate labels probability for array of total energies (te) and totally arbitrary scalar value t."""
@@ -830,6 +830,10 @@ class Element:
                 range_h = self.phys_shp[1]
             else:
                 range_h = range_h
+            if epsilon is None:
+                epsilon = 1  
+            else:
+                epsilon = epsilon
             # coordinates of borehole elements         
             coor_BH = np.hstack((idx_h_fixed, idx_v_fixed))
             # labels of borehole elements
@@ -851,7 +855,7 @@ class Element:
                 #    -                          - range_v
                 #    -                          -   !
                 #    -             i            -  --
-                #    -      (unknown element)   -
+                #    -      (unknown element)     -
                 #    -                          -  
                 #    -                          -
                 #    ----------------------------
@@ -885,11 +889,11 @@ class Element:
                 # calculate D(j, i)
                 distance_DANN_i = np.sum((difference @ local_matrix_psi).T * difference.T, axis=0)
                 distance_DANN.append(distance_DANN_i)              
-            self.distance_DANN = np.array(distance_DANN)               
-            return self.distance_DANN           
+            self.distance_DANN = np.array(distance_DANN)                          
+            return self.distance_DANN      
+       
    
-
-def get_init_labels_prob(self, epsilon, k, range_v, range_h):
+def get_init_labels_prob(self, epsilon=None, k=None, range_v=None, range_h=None):
     """ Calculate the probability of choosing labels for unknown elements in sampling initial field.
     
     Args:
@@ -944,7 +948,7 @@ def get_init_labels_prob(self, epsilon, k, range_v, range_h):
         labels_prob_init = dist_for_label_exp / dist_for_label_exp_sum
         
         return dist_KHMD, labels_prob_init
-            
+    
         
 def pseudocolor(physic_shp, stencil=None):
     """Graph coloring based on the physical dimensions for independent labels draw. This function is the basis for
@@ -1084,6 +1088,3 @@ def estimator(betas, start_iter):
     else:
         raise Exception("betas is empty")
     return beta_est, beta_std, beta_cov
-
-
-
