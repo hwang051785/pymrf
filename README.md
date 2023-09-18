@@ -19,5 +19,5 @@ The file "generate_MRF_realizations.py" is the code for generating an MRF given 
 ### The inference process
 The file "Stratigraphic configuration acquisition process of synthetic case.ipynb" is the inference process.
 
-## Reference
+## Reference [see the PDF file]
 Wei, X., & Wang, H. (2022). Stochastic stratigraphic modeling using Bayesian machine learning. Engineering Geology, 307, 106789. doi: https://doi.org/10.1016/j.enggeo.2022.106789
